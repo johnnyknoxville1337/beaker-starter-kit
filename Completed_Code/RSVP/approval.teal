@@ -1,0 +1,256 @@
+#pragma version 7
+intcblock 1 0 2
+bytecblock 0x72737670 0x7072696365 0x151f7c75 0x636865636b65645f696e
+txn NumAppArgs
+intc_1 // 0
+==
+bnz main_l12
+txna ApplicationArgs 0
+pushbytes 0x8fe25e05 // "check_in()void"
+==
+bnz main_l11
+txna ApplicationArgs 0
+pushbytes 0x240d2f67 // "create(uint64)void"
+==
+bnz main_l10
+txna ApplicationArgs 0
+pushbytes 0xe922be95 // "do_rsvp(pay)void"
+==
+bnz main_l9
+txna ApplicationArgs 0
+pushbytes 0x8a23ee21 // "read_price()uint64"
+==
+bnz main_l8
+txna ApplicationArgs 0
+pushbytes 0xef977255 // "read_rsvp()uint64"
+==
+bnz main_l7
+err
+main_l7:
+txn OnCompletion
+intc_1 // NoOp
+==
+txn ApplicationID
+intc_1 // 0
+!=
+&&
+assert
+callsub readrsvp_9
+store 2
+bytec_2 // 0x151f7c75
+load 2
+itob
+concat
+log
+intc_0 // 1
+return
+main_l8:
+txn OnCompletion
+intc_1 // NoOp
+==
+txn ApplicationID
+intc_1 // 0
+!=
+&&
+assert
+callsub readprice_8
+store 1
+bytec_2 // 0x151f7c75
+load 1
+itob
+concat
+log
+intc_0 // 1
+return
+main_l9:
+txn OnCompletion
+intc_0 // OptIn
+==
+txn ApplicationID
+intc_1 // 0
+!=
+&&
+assert
+txn GroupIndex
+intc_0 // 1
+-
+store 0
+load 0
+gtxns TypeEnum
+intc_0 // pay
+==
+assert
+load 0
+callsub dorsvp_7
+intc_0 // 1
+return
+main_l10:
+txn OnCompletion
+intc_1 // NoOp
+==
+txn ApplicationID
+intc_1 // 0
+==
+&&
+assert
+txna ApplicationArgs 1
+btoi
+callsub create_6
+intc_0 // 1
+return
+main_l11:
+txn OnCompletion
+intc_1 // NoOp
+==
+txn ApplicationID
+intc_1 // 0
+!=
+&&
+assert
+callsub checkin_5
+intc_0 // 1
+return
+main_l12:
+txn OnCompletion
+intc_2 // CloseOut
+==
+bnz main_l16
+txn OnCompletion
+pushint 5 // DeleteApplication
+==
+bnz main_l15
+err
+main_l15:
+txn ApplicationID
+intc_1 // 0
+!=
+assert
+callsub delete_1
+intc_0 // 1
+return
+main_l16:
+txn ApplicationID
+intc_1 // 0
+!=
+assert
+callsub bareexternal_2
+intc_0 // 1
+return
+
+// auth_only
+authonly_0:
+global CreatorAddress
+==
+retsub
+
+// delete
+delete_1:
+txn Sender
+callsub authonly_0
+// unauthorized
+assert
+intc_0 // 1
+return
+
+// bare_external
+bareexternal_2:
+itxn_begin
+intc_0 // pay
+itxn_field TypeEnum
+txn Sender
+itxn_field Receiver
+bytec_1 // "price"
+app_global_get
+itxn_field Amount
+itxn_submit
+bytec_0 // "rsvp"
+bytec_0 // "rsvp"
+app_global_get
+intc_0 // 1
+-
+app_global_put
+retsub
+
+// auth_opted_in
+authoptedin_3:
+global CurrentApplicationID
+app_opted_in
+retsub
+
+// auth_only
+authonly_4:
+global CreatorAddress
+==
+retsub
+
+// check_in
+checkin_5:
+txn Sender
+callsub authoptedin_3
+// unauthorized
+assert
+txn Sender
+bytec_3 // "checked_in"
+intc_0 // 1
+app_local_put
+retsub
+
+// create
+create_6:
+store 3
+bytec_1 // "price"
+pushint 1000000 // 1000000
+app_global_put
+bytec_0 // "rsvp"
+intc_1 // 0
+app_global_put
+bytec_1 // "price"
+load 3
+app_global_put
+retsub
+
+// do_rsvp
+dorsvp_7:
+store 4
+global GroupSize
+intc_2 // 2
+==
+assert
+load 4
+gtxns Receiver
+global CurrentApplicationAddress
+==
+assert
+load 4
+gtxns Amount
+bytec_1 // "price"
+app_global_get
+==
+assert
+txn Sender
+bytec_3 // "checked_in"
+intc_1 // 0
+app_local_put
+bytec_0 // "rsvp"
+bytec_0 // "rsvp"
+app_global_get
+intc_0 // 1
++
+app_global_put
+retsub
+
+// read_price
+readprice_8:
+bytec_1 // "price"
+app_global_get
+retsub
+
+// read_rsvp
+readrsvp_9:
+txn Sender
+callsub authonly_4
+// unauthorized
+assert
+bytec_0 // "rsvp"
+app_global_get
+retsub
