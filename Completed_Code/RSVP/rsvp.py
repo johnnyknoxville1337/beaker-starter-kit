@@ -1,3 +1,4 @@
+from ast import Call
 from fileinput import close
 from typing import Final
 
@@ -18,6 +19,9 @@ from beaker import (
     bare_external,
     Authorize
 )
+
+MIN_BAL = Int(100000)
+FEE = Int(1000)
 
 class EventRSVP(Application):
 
@@ -44,7 +48,7 @@ class EventRSVP(Application):
         """Deploys the contract and initialze the app states"""
         return Seq(
             self.initialize_application_state(),
-            self.price.set(event_price.get())
+            self.price.set(event_price.get()),
         )
 
     @opt_in
@@ -54,25 +58,40 @@ class EventRSVP(Application):
             Assert(
                 Global.group_size() == Int(2),
                 payment.get().receiver() == self.address,
-                payment.get().amount() == self.price
+                payment.get().amount() == self.price,
             ),
             self.initialize_account_state(),
             self.rsvp.increment(),
         )
-    
-    @close_out
-    def close_out(self):
-        return self.refund()
 
-    @clear_state
-    def clear_state(self):
-        return self.refund()
+    @external(authorize=Authorize.opted_in(Global.current_application_id()))
+    def check_in(self):
+        """If the Sender RSVPed, check-in the Sender"""
+        return self.checked_in.set(Int(1))
+
+    @internal
+    def withdraw_funds(self):
+        rsvp_bal = Balance(self.address)
+        return Seq(
+            Assert(
+                rsvp_bal > (MIN_BAL + FEE),
+            ),
+            InnerTxnBuilder.Execute({
+                TxnField.type_enum: TxnType.Payment,
+                TxnField.receiver: Txn.sender(),
+                TxnField.amount: rsvp_bal - (MIN_BAL + FEE),
+            }),
+        )
 
     @delete(authorize=Authorize.only(Global.creator_address()))
     def delete(self):
-        return Approve()
+        return If(Balance(self.address) > (MIN_BAL + FEE), self.withdraw_funds())
+    
+    @external(authorize=Authorize.only(Global.creator_address()))
+    def withdraw_external(self):
+        return self.withdraw_funds()
 
-    @internal
+    @bare_external(close_out=CallConfig.CALL, clear_state=CallConfig.CALL)
     def refund(self):
         return Seq(
             InnerTxnBuilder.Begin(),
@@ -85,11 +104,10 @@ class EventRSVP(Application):
             self.rsvp.decrement()
         )
 
-    @external(authorize=Authorize.opted_in(Global.current_application_id()))
-    def check_in(self):
-        """If the Sender RSVPed, check-in the Sender"""
-        return self.checked_in.set(Int(1))
-
+    ################
+    # Read Methods #
+    ################
+    
     @external(read_only=True, authorize=Authorize.only(Global.creator_address()))
     def read_rsvp(self, *, output: abi.Uint64):
         """Read amount of RSVP to the event. Only callable by Creator."""
