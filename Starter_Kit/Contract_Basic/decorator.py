@@ -1,57 +1,33 @@
-from typing import Final
-
-from imaplib import Internaldate2tuple
-from sre_parse import State
-from turtle import update
-from typing import Final
-from pyteal import abi
-from pyteal import *
-
 from beaker import (
     Application,
-    ApplicationStateValue,
-    DynamicApplicationStateValue,
-    AccountStateValue,
-    DynamicAccountStateValue,
     create,
-    opt_in,
+    delete,
     external,
     internal
 )
-from beaker.state import AccountStateBlob, ApplicationStateBlob
-from pyteal import abi, TealType, Bytes, Int, Txn
+from pyteal import abi, TealType, Approve, Global
 from beaker.client import ApplicationClient
 from beaker import sandbox, Authorize
 
 class DecoratorExample(Application):
 
-    rsvp: Final[ApplicationStateValue] = ApplicationStateValue(
-        stack_type=TealType.uint64,
-        default=Int(0),
-        descr="Number of people who RSVPed to the event"
-    )
-
     ####################
     # External Methods #
     ####################
 
-    @external
-    def check_in(self, a: abi.Uint64, b: abi.Uint64, *, output: abi.Uint64):
+    # TODO: Write decorator that exposes the method to the ABI
+    def add(self, a: abi.Uint64, b: abi.Uint64, *, output: abi.Uint64):
         return output.set(a.get() + b.get())
-    
-    @external(read_only=True)
-    def read_rsvp(self, *, output: abi.Uint64):
-        return self.rsvp
 
-    @external
+    # TODO: Write decorator that exposes the method to the ABI
     def add_with_internal(self, a: abi.Uint64, b: abi.Uint64, *, output: abi.Uint64):
-        return output.set(self.internal_add(a.get(), b.get()))
+        return output.set(self.internal_add(a, b))
 
     ####################
     # Internal Methods #
     ####################
 
-    @internal(TealType.uint64)
+    # TODO: Write decorator that does not expose the method to the ABI and returns a abi,uint64 type
     def internal_add(self, a: abi.Uint64, b: abi.Uint64):
         return a.get() + b.get()
 
@@ -59,27 +35,41 @@ class DecoratorExample(Application):
     # Bare External Methods #
     #########################
 
-    @create
+    # TODO: Write decorator that set method to be handled by a bare NoOp call and ApplicationId == 0
     def create(self):
-        return self.initialize_application_state()
+        return Approve()
 
-    @update(authorize=Authorize.only(Global.creator_address()))
+    # TODO: Write decorator that set method to be handled by a bare DeleteApplication call 
+    # AND that makes it only callable by contract creator
     def update(self):
-        return self.rsvp.set(Int(0))
+        return Approve()
 
-    def demo():
-        client = sandbox.get_algod_client()
+# interaction code given for now. Will learn soon!
+def demo():
+    # Set up accounts we'll use
+    accts = sandbox.get_accounts()
+    acct1 = accts.pop()
+    print(f"account 1 address: {acct1.address}")
 
-        acct = sandbox.get_accounts().pop()
+    # Set up Algod Client
+    client=sandbox.get_algod_client()
 
-        # Create an Application client containing both an algod client and app
-        app_client = ApplicationClient(client=client, app=DecoratorExample(), signer=acct.signer)
+    app=DecoratorExample()
 
-        # Create the application on chain, set the app id for the app client
-        app_id, app_addr, txid = app_client.create()
-        print(f"Created App with id: {app_id} and address: {app_addr} in tx: {txid}\n")
+    # Create Application client
+    app_client1 = ApplicationClient(client, app, signer=acct1.signer)
 
-        result = app_client.call(DecoratorExample.)
-        print(f"result: {result.return_value}")
+    # Create the app on-chain (uses signer1)
+    app_client1.create()
 
-demo()
+
+    print(app_client1.call(DecoratorExample.add, a=2, b=3).return_value)
+    print(app_client1.call(DecoratorExample.add_with_internal, a=6, b=4).return_value)
+
+    try:
+        app_client1.delete()
+    except Exception as e:
+        print(e)
+
+if __name__ == "__main__":
+    demo()

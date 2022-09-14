@@ -6,13 +6,10 @@ from beaker.application import Application
 from beaker.decorators import external
 from beaker import sandbox
 
-class Simple(Application):
+# TODO: create a class with a hello method that returns "hello (your name)"  
 
-    @external
-    def hello(self, name: abi.String, *, output: abi.String):
-        # Set output to the result of `Hello, `+name
-        return output.set(Concat(Bytes("Hello, "), name.get()))
 
+# interaction code given for now. Will learn soon!
 def demo():
     client = sandbox.get_algod_client()
 
@@ -25,7 +22,8 @@ def demo():
     app_id, app_addr, txid = app_client.create()
     print(f"Created App with id: {app_id} and address: {app_addr} in tx: {txid}\n")
 
-    result = app_client.call(Simple.hello, name="Chris")
+    # TODO: replace with your name to make it personal :) 
+    result = app_client.call(Simple.hello, name="YOUR NAME")
     print(f"result: {result.return_value}")
 
 demo()

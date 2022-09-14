@@ -1,7 +1,6 @@
-from sre_parse import State
 from typing import Final
-from pyteal import abi
-
+from beaker.client import ApplicationClient, LogicException
+from beaker.sandbox import get_algod_client, get_accounts
 from beaker import (
     Application,
     ApplicationStateValue,
@@ -12,10 +11,7 @@ from beaker import (
     opt_in,
     external,
 )
-from beaker.state import AccountStateBlob, ApplicationStateBlob
 from pyteal import abi, TealType, Bytes, Int, Txn
-from beaker.client import ApplicationClient
-from beaker import sandbox
 
 class StateExample(Application):
 
@@ -40,10 +36,6 @@ class StateExample(Application):
         descr="A dictionary-like dynamic app state variable, with 32 possible keys",
     )
 
-    application_blob: Final[ApplicationStateBlob] = ApplicationStateBlob(
-        max_keys=16,
-    )
-
     #################
     # Account States
     #################
@@ -51,7 +43,7 @@ class StateExample(Application):
     declared_account_value: Final[AccountStateValue] = AccountStateValue(
         stack_type=TealType.uint64,
         default=Int(1),
-        descr="An int stored for each account that opts in",
+        descr="Account state storing integer values",
     )
 
     dynamic_account_value: Final[DynamicAccountStateValue] = DynamicAccountStateValue(
@@ -60,8 +52,6 @@ class StateExample(Application):
         descr="A dynamic state value, allowing 8 keys to be reserved, in this case byte type",
     )
 
-    account_blob: Final[AccountStateBlob] = AccountStateBlob(max_keys=3)
-
     @create
     def create(self):
         return self.initialize_application_state()
@@ -69,28 +59,6 @@ class StateExample(Application):
     @opt_in
     def opt_in(self):
         return self.initialize_account_state()
-
-    @external
-    def write_acct_blob(self, v: abi.String):
-        return self.account_blob.write(Int(0), v.get())
-
-    @external
-    def read_acct_blob(self, *, output: abi.DynamicBytes):
-        return output.set(
-            self.account_blob.read(Int(0), self.account_blob.blob.max_bytes - Int(1))
-        )
-
-    @external
-    def write_app_blob(self, v: abi.String):
-        return self.application_blob.write(Int(0), v.get())
-
-    @external
-    def read_app_blob(self, *, output: abi.DynamicBytes):
-        return output.set(
-            self.application_blob.read(
-                Int(0), self.application_blob.blob.max_bytes - Int(1)
-            )
-        )
 
     @external
     def set_app_state_val(self, v: abi.String):
@@ -132,18 +100,42 @@ class StateExample(Application):
 
 
 def demo():
-    client = sandbox.get_algod_client()
 
-    acct = sandbox.get_accounts().pop()
+    accts = get_accounts()
 
-    # Create an Application client containing both an algod client and app
-    app_client = ApplicationClient(client=client, app=Simple(), signer=acct.signer)
+    acct = accts.pop()
 
-    # Create the application on chain, set the app id for the app client
-    app_id, app_addr, txid = app_client.create()
-    print(f"Created App with id: {app_id} and address: {app_addr} in tx: {txid}\n")
+    client = get_algod_client()
 
-    result = app_client.call(Simple.hello_world)
-    print(f"result: {result.return_value}")
+    app = StateExample()
 
-demo()
+    app_client = ApplicationClient(client, app, signer=acct.signer)
+    app_id, app_address, transaction_id = app_client.create()
+    print(
+        f"DEPLOYED: App ID: {app_id} Address: {app_address} Transaction ID: {transaction_id}"
+    )
+
+    app_client.opt_in()
+    print("Opted in")
+
+    app_client.call(StateExample.set_account_state_val, v=123)
+    result = app_client.call(StateExample.get_account_state_val)
+    print(f"Set/get acct state result: {result.return_value}")
+
+    app_client.call(StateExample.set_dynamic_account_state_val, k=123, v="stuff")
+    result = app_client.call(StateExample.get_dynamic_account_state_val, k=123)
+    print(f"Set/get dynamic acct state result: {result.return_value}")
+
+    try:
+        app_client.call(StateExample.set_app_state_val, v="Expect fail")
+    except LogicException as e:
+        print(f"Task failed successfully: {e}")
+        result = app_client.call(StateExample.get_app_state_val)
+        print(f"Set/get app state result: {result.return_value}")
+
+    app_client.call(StateExample.set_dynamic_app_state_val, k=15, v=123)
+    result = app_client.call(StateExample.get_dynamic_app_state_val, k=15)
+    print(f"Set/get dynamic app state result: {result.return_value}")
+
+if __name__ == "__main__":
+    demo()

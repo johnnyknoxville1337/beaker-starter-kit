@@ -1,10 +1,6 @@
-from ast import Call
-from fileinput import close
 from typing import Final
 
-# from pyteal import abi, TealType, Int, Expr, Global, Seq, Txn, Approve, Assert,MethodConfig, CallConfig, InnerTxnBuilder, TxnField, TxnType
 from pyteal import *
-
 from beaker import (
     Application,
     ApplicationStateValue,
@@ -14,14 +10,9 @@ from beaker import (
     external,
     internal,
     delete,
-    close_out,
-    clear_state, 
     bare_external,
     Authorize
 )
-
-MIN_BAL = Int(100000)
-FEE = Int(1000)
 
 class EventRSVP(Application):
 
@@ -43,6 +34,16 @@ class EventRSVP(Application):
         descr="0 = not checked in, 1 = checked in"
     )
 
+    ############
+    # Constants#
+    ############
+
+    # Contract address minimum balance
+    MIN_BAL = Int(100000)
+
+    # Algorand minimum txn fee
+    FEE = Int(1000)
+
     @create
     def create(self, event_price: abi.Uint64):
         """Deploys the contract and initialze the app states"""
@@ -53,7 +54,7 @@ class EventRSVP(Application):
 
     @opt_in
     def do_rsvp(self, payment: abi.PaymentTransaction):
-        """Sender rsvp to the event by opting into the contract"""
+        """Let txn sender rsvp to the event by opting into the contract"""
         return Seq(
             Assert(
                 Global.group_size() == Int(2),
@@ -71,34 +72,38 @@ class EventRSVP(Application):
 
     @internal
     def withdraw_funds(self):
+        """Helper method that withdraws funds in the RSVP contract"""
         rsvp_bal = Balance(self.address)
         return Seq(
             Assert(
-                rsvp_bal > (MIN_BAL + FEE),
+                rsvp_bal > (self.MIN_BAL + self.FEE),
             ),
             InnerTxnBuilder.Execute({
                 TxnField.type_enum: TxnType.Payment,
                 TxnField.receiver: Txn.sender(),
-                TxnField.amount: rsvp_bal - (MIN_BAL + FEE),
+                TxnField.amount: rsvp_bal - (self.MIN_BAL + self.FEE),
             }),
         )
-
-    @delete(authorize=Authorize.only(Global.creator_address()))
-    def delete(self):
-        return If(Balance(self.address) > (MIN_BAL + FEE), self.withdraw_funds())
     
     @external(authorize=Authorize.only(Global.creator_address()))
     def withdraw_external(self):
+        """Let event creator to withdraw all funds in the contract"""
         return self.withdraw_funds()
 
+    @delete(authorize=Authorize.only(Global.creator_address()))
+    def delete(self):
+        """Let event creator delete the contract. Withdraws remaining funds"""
+        return If(Balance(self.address) > (self.MIN_BAL + self.FEE), self.withdraw_funds())
+    
     @bare_external(close_out=CallConfig.CALL, clear_state=CallConfig.CALL)
     def refund(self):
+        """Refunds event payment to guests"""
         return Seq(
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.Payment,
                 TxnField.receiver: Txn.sender(),
-                TxnField.amount: self.price,
+                TxnField.amount: self.price - self.FEE,
             }),
             InnerTxnBuilder.Submit(),
             self.rsvp.decrement()
@@ -120,14 +125,20 @@ class EventRSVP(Application):
 
 
 if __name__ == "__main__":
+    import os
     import json
 
-    rsvp_app = EventRSVP()
-    print(f"\nApproval program:\n{rsvp_app.approval_program}")
-    print(f"\nClear State program:\n{rsvp_app.approval_program}")
-    print(f"\nabi:\n{json.dumps(rsvp_app.contract.dictify(), indent=2)}")
+    path = os.path.dirname(os.path.abspath(__file__))
 
-    with open("approval.teal", "w") as f:
+    rsvp_app = EventRSVP()
+
+    # Dump out the contract as json that can be read in by any of the SDKs
+    with open(os.path.join(path, "contract.json"), "w") as f:
+        f.write(json.dumps(rsvp_app.application_spec(), indent=2))
+
+    # Write out the approval and clear programs
+    with open(os.path.join(path, "approval.teal"), "w") as f:
         f.write(rsvp_app.approval_program)
-    with open("rsvp_app.json", "w") as f:
-        f.write(json.dumps(rsvp_app.application_spec()))
+
+    with open(os.path.join(path, "clear.teal"), "w") as f:
+        f.write(rsvp_app.clear_program)
