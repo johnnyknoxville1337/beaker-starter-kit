@@ -65,18 +65,18 @@ def demo():
     # Set up Algod Client
     client="TODO"
 
-    # Create Application client
+    # Create Application client (uses signer1)
     app_client1 = "TODO"
 
-    # Create the app on-chain (uses signer1)
-    "CREATE APP HERE"
+    # Create the app on-chain 
+    "TODO: CREATE APP HERE"
     print(f"Current app state: {app_client1.get_application_state()}\n")
     # Fund the app account with 1 algo
-    "FUND APP HERE"
+    "TODO: FUND APP HERE"
 
     # Set nickname of acct1
-    "ACCT1 OPT IN HERE"
-    "ACCT1 SET NICKNAME BY CALLING APP HERE"
+    "TODO: ACCT1 OPT IN HERE"
+    "TODO: ACCT1 SET NICKNAME BY CALLING APP HERE"
     print("account 1 local state:")
     print(app_client1.get_account_state(), "\n")
 

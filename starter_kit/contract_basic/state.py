@@ -14,10 +14,20 @@ from beaker import (
 from pyteal import abi, TealType, Bytes, Int, Txn
 
 class StateExample(Application):
+    """
+    <Application vs Account state>
+
+    Application(Global) State: States held by the smart contract
+
+    Account(Local) State: Specific states for each account
+    """
 
     #####################
     # Application States
     #####################
+    """
+    Learn more about Application State here: https://algorand-devrel.github.io/beaker/html/state.html#application-state
+    """
 
     # TODO: Declare a static app state with 
     # stack type = TealType.bytes
@@ -32,6 +42,9 @@ class StateExample(Application):
     #################
     # Account States
     #################
+    """
+    Learn more about Account State here: https://algorand-devrel.github.io/beaker/html/state.html#account-state
+    """
 
     # TODO: Declare Account state with
     # stack type = TealType.uint64
