@@ -9,6 +9,8 @@ Beaker Documentation: https://algorand-devrel.github.io/beaker/html/index.html
 
 ## How to Learn
 
+This is a recommendation only.
+
 1. Clone and set up your development environment (instruction below) to code what you learn by yourself. 
 2. Have Beaker Github repo and Beaker documentation opened while learning. 
 3. Try filling in blanks in files under `starter-kit` folder and make the file run. If you are stuck, refer [code examples](https://github.com/algorand-devrel/beaker/tree/master/examples) provided in the Beaker github repo or search in the Beaker doc for guidance. Recommended learning route is:
