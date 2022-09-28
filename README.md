@@ -5,6 +5,7 @@ Building smart contracts with TEAL, an assembly language, and PyTeal could be ch
 This is a Beaker starter kit that covers all of the components of Beaker and a complete RSVP Application example that utilizes Beaker. 
 
 Beaker repo: https://github.com/algorand-devrel/beaker
+
 Beaker Documentation: https://algorand-devrel.github.io/beaker/html/index.html
 
 ## How to Learn
