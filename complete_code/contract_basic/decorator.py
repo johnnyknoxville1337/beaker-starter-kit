@@ -61,7 +61,7 @@ def demo():
     app_client1.create()
 
 
-    print(app_client1.call(DecoratorExample.add, a=2, b=3).return_value)
+    print(app_client1.call(DecoratorExample.add, a=7, b=4).return_value)
     print(app_client1.call(DecoratorExample.add_with_internal, a=6, b=4).return_value)
 
     try:

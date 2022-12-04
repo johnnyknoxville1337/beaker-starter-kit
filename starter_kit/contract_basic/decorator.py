@@ -16,10 +16,12 @@ class DecoratorExample(Application):
     ####################
 
     # TODO: Write decorator that exposes the method to the ABI
+    @external
     def add(self, a: abi.Uint64, b: abi.Uint64, *, output: abi.Uint64):
         return output.set(a.get() + b.get())
 
     # TODO: Write decorator that exposes the method to the ABI
+    @external
     def add_with_internal(self, a: abi.Uint64, b: abi.Uint64, *, output: abi.Uint64):
         return output.set(self.internal_add(a, b))
 
@@ -28,6 +30,7 @@ class DecoratorExample(Application):
     ####################
 
     # TODO: Write decorator that does not expose the method to the ABI and returns a abi,uint64 type
+    @internal(TealType.uint64)
     def internal_add(self, a: abi.Uint64, b: abi.Uint64):
         return a.get() + b.get()
 
@@ -36,11 +39,13 @@ class DecoratorExample(Application):
     #########################
 
     # TODO: Write decorator that set method to be handled by a bare NoOp call and ApplicationId == 0
+    @create
     def create(self):
         return Approve()
 
     # TODO: Write decorator that set method to be handled by a bare DeleteApplication call 
     # AND that makes it only callable by contract creator
+    @delete(authorize=Authorize.only(Global.creator_address()))
     def update(self):
         return Approve()
 

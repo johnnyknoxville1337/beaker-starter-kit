@@ -58,31 +58,33 @@ class ClientExample(Application):
 
 def demo():
     # Set up accounts we'll use
-    accts = "TODO"
-    acct1 = "TODO"
+    accts = sandbox.get_accounts()
+    acct1 = accts.pop()
     print(f"account 1 address: {acct1.address}")
 
     # Set up Algod Client
-    client="TODO"
+    client=sandbox.get_algod_client()
 
     # Create Application client (uses signer1)
-    app_client1 = "TODO"
+    app_client1 = ApplicationClient(
+        client, app=ClientExample(), signer=acct1.signer
+    )
 
     # Create the app on-chain 
-    "TODO: CREATE APP HERE"
+    app_client1.create()
     print(f"Current app state: {app_client1.get_application_state()}\n")
     # Fund the app account with 1 algo
-    "TODO: FUND APP HERE"
+    app_client1.fund(1 * consts.algo)
 
     # Set nickname of acct1
-    "TODO: ACCT1 OPT IN HERE"
-    "TODO: ACCT1 SET NICKNAME BY CALLING APP HERE"
+    app_client1.opt_in()
+    app_client1.call(ClientExample.set_nick, nick="first")
     print("account 1 local state:")
     print(app_client1.get_account_state(), "\n")
 
     # Show application account information
     print("application acct info:")
-    app_acct_info = "TODO: get account info"
+    app_acct_info = json.dumps(app_client1.get_application_account_info(), indent=4)
     print(app_acct_info)
 
     try:
@@ -90,7 +92,3 @@ def demo():
         app_client1.delete()
     except Exception as e:
         print(e)
-
-
-if __name__ == "__main__":
-    demo()

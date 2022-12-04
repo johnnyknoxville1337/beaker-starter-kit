@@ -32,13 +32,26 @@ class StateExample(Application):
     # TODO: Declare a static app state with 
     # stack type = TealType.bytes
     # default value: "This value is immutable!"
-    declared_app_value: Final[ApplicationStateValue] = "TODO"
+    declared_app_value: Final[ApplicationStateValue] = ApplicationStateValue(
+        stack_type=TealType.bytes,
+        default=Bytes(
+            "This value is immutable!"
+        ),
+        static=True,
+        descr="A static declared variable",
+    )
 
     # TODO: Declare a dynamic app state with 
     # stack type = TealType.uint64
     # max keys = 32
-    dynamic_app_value: Final[DynamicApplicationStateValue] = "TODO"
+    dynamic_app_value: Final[
+        DynamicApplicationStateValue
+        ] = DynamicApplicationStateValue(
+        stack_type=TealType.uint64,
+        max_keys=32,
+        descr="A dictionary-like dynamic app state variable, with 32 possible keys",
 
+    )
     #################
     # Account States
     #################
@@ -49,12 +62,20 @@ class StateExample(Application):
     # TODO: Declare Account state with
     # stack type = TealType.uint64
     # default value = 1
-    declared_account_value: Final[AccountStateValue] = "TODO"
+    declared_account_value: Final[AccountStateValue] = AccountStateValue(
+        stack_type=TealType.uint64,
+        default=Int(1),
+        descr="Account state storing integer values",
+    )
 
     # TODO: Declare Dynamic Account state with
     # stack type = TealType.bytes
     # max keys = 8 
-    dynamic_account_value: Final[DynamicAccountStateValue] = "TODO"
+    dynamic_account_value: Final[DynamicAccountStateValue] = DynamicAccountStateValue(
+        stack_type=TealType.bytes,
+        max_keys=8,
+        descr="A dynamic state value, allowing 8 keys to be reserved, in this case byte type",
+    )
 
     # Code from here and below are given. Calling the Demo function should work if states are implemented correctly.
     @create
