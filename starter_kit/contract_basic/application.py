@@ -27,7 +27,7 @@ def demo():
     print(f"Created App with id: {app_id} and address: {app_addr} in tx: {txid}\n")
 
     # TODO: replace with your name to make it personal :) 
-    result = app_client.call(Simple.hello, name="zksnarksalrogand")
+    result = app_client.call(Simple.hello, name="zkproofsalrogand")
     print(f"result: {result.return_value}")
 
 demo()
